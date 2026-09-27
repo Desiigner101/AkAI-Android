@@ -259,17 +259,28 @@ class FSLRecognitionService(private val context: Context) {
             val wristY = lms[0].y()
             val wristZ = lms[0].z()
 
+            // SCALE NORMALIZATION (must match dataset_builder.py + live_recognizer.py EXACTLY):
+            // hand_size = distance from wrist(0) to middle-fingertip(12), measured on the
+            // WRIST-CENTERED coordinates (i.e. relative to the wrist). Then divide every
+            // wrist-centered landmark by that size. Guard against zero size.
+            val mid = lms[12]
+            val mcX = mid.x() - wristX
+            val mcY = mid.y() - wristY
+            val mcZ = mid.z() - wristZ
+            var handSize = Math.sqrt((mcX * mcX + mcY * mcY + mcZ * mcZ).toDouble()).toFloat()
+            if (handSize <= 1e-6f) handSize = 1.0f   // avoid divide-by-zero; leaves centered coords unscaled
+
             if (label == "Left") {
                 for (j in lms.indices) {
-                    lhRaw[j * 3]     = lms[j].x() - wristX
-                    lhRaw[j * 3 + 1] = lms[j].y() - wristY
-                    lhRaw[j * 3 + 2] = lms[j].z() - wristZ
+                    lhRaw[j * 3]     = (lms[j].x() - wristX) / handSize
+                    lhRaw[j * 3 + 1] = (lms[j].y() - wristY) / handSize
+                    lhRaw[j * 3 + 2] = (lms[j].z() - wristZ) / handSize
                 }
             } else {
                 for (j in lms.indices) {
-                    rhRaw[j * 3]     = lms[j].x() - wristX
-                    rhRaw[j * 3 + 1] = lms[j].y() - wristY
-                    rhRaw[j * 3 + 2] = lms[j].z() - wristZ
+                    rhRaw[j * 3]     = (lms[j].x() - wristX) / handSize
+                    rhRaw[j * 3 + 1] = (lms[j].y() - wristY) / handSize
+                    rhRaw[j * 3 + 2] = (lms[j].z() - wristZ) / handSize
                 }
             }
         }
